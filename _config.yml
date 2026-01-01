@@ -21,9 +21,9 @@
 title: Mubashir Usman's Blog
 email: mubashirusman016 at gmail dot com
 description: >- # this means to ignore newlines until "baseurl:"
-  Some things about site reliability engineering and building scalable systems.
-  I may post my thoughts on navigating life in general.
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
+  My learnings as a site reliability engineer and building reliable systems for production.
+  I sometimes post my thoughts on navigating life in general.
+url: "https://mubashirusman.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 # twitter_username: jekyllrb
 # github_username:  jekyll
 

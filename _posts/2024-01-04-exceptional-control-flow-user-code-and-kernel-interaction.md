@@ -2,7 +2,7 @@
 layout: post
 title:  "Exceptional Control Flow: User Code and Kernel Interaction"
 date:   2024-02-04 5:30:47 +0100
-categories: programming
+categories: linux
 ---
 ### How user code and kernel coexist through exceptional control flow. Understanding the mechanisms that allow safe transitions between user and kernel space.
 A process is a running instance of a program consisting of memory and register values. Memory contains both user code and kernel code. To change system state (writing to disk, sending network packets, responding to Ctrl+C), control must transfer to the kernel. This is because we don't want user programs performing sensitive operations directly.

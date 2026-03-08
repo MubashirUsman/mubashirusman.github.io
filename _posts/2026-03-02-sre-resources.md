@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Useful blogs and articles for reference"
-date:   2025-12-25 00:30:20 +0000
+date:   2026-03-08 13:30:00 +0000
 categories: career sre
 ---
 I often read something online and want to revisit it in future, sometimes I bookmark it but that also hasn't proved to be very useful. The problem with bookmarking is that I need to remember what I was reading there, sometimes it obvious but many times its not. Also I can't quickly search in bookmarks. So I will link some useful resources here.

@@ -51,11 +51,13 @@ I often read something online and want to revisit it in future, sometimes I book
 
 ## System Design
 - Hello Interview [System design in a hurry](https://www.hellointerview.com/learn/system-design/in-a-hurry/introduction)
-- Github system design[Big tutorial for refreshing design and components](https://github.com/karanpratapsingh/system-design)
+- Distributed Systems Theory for engineers (!scientists) [Paper Trail](https://www.the-paper-trail.org/post/2014-08-09-distributed-systems-theory-for-the-distributed-systems-engineer/)
+- Github system design [Big tutorial for refreshing design and components](https://github.com/karanpratapsingh/system-design)
 - Blog [Architecture and System Design](https://jg.gg/2016/07/31/architecture-and-systems-design-interview/)
 
 ## Pratice Linux
 - Challenge games (https://overthewire.org/wargames/bandit/)
+- Hands on Problems [Sad servers](https://sadservers.com/)
 
 ## Tutorials
 - Tutorial Shell [Shell redirection](https://www.redhat.com/en/blog/linux-shell-redirection-pipelining)
@@ -73,10 +75,10 @@ I often read something online and want to revisit it in future, sometimes I book
 
 ## Nice Blogs
 - Siddharth K resume (https://www.siddharthkannan.in/)
+- CV in typst (https://mattrighetti.com/2023/10/25/i-rewrote-my-cv-in-typst)
 - Short post about adding 9s to SLOs (https://trstringer.com/slo-adding-nines/)
 - How to be an SRE (https://blog.alicegoldfuss.com/how-to-get-into-sre/)
 - SRE bootcamp (https://devopsbootcamp.osuosl.org/start-here.html)
-- CV in typst (https://mattrighetti.com/2023/10/25/i-rewrote-my-cv-in-typst)
 - Unix Sockets (https://rednafi.com/misc/tinkering-with-unix-domain-socket/)
 - Real world SRE (https://blog.relyabilit.ie/sre-in-the-real-world/)
 - Boring technology (https://boringtechnology.club/)

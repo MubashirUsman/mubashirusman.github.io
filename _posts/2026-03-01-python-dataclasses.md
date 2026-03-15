@@ -65,7 +65,8 @@ def funcf(func: Callable[[Any], Any], sequence: Sequence[Any]) -> Iterator[str]:
 
 NOTE: From Python 3.9 onwards, many generics are being deprecated in `typing` module and moved to other modules like `collections.abc`.
 
-## Threading
+
+# Threading
 In python, threads are not run in parallel, instead they are run sequentially due to global interpreter lock (GIL). But they can still be helpful in tasks which are I/O bound and have to wait for something else to complete their execution. This is because even one CPU can do other things instead of waiting for a slower task to finish.
 `threading` allows to `start` up as many threads and then `join` them later.
 

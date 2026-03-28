@@ -57,7 +57,7 @@ Can be divided in two categories: 1. Strong consistency models 2. Weak consisten
 - Strong consistency models are: 1. _linearizable consistency_ is the one in which all operations appear to be executed atomically in the same order as the actual time ordering of operations, 2. _sequential consistency_ is same as linearizable except that operations may be executed in a different order than received.
 - Weak consistency models are: 1. Client-centric models involve the notion of a client or session in some way. For example forwarding a client to the same replica after they update something so that they don't see older data themselves. 2. Eventual consistency, where all nodes will agree on the same value after an undefined amount of time. Eventually is very weak form of consistency. So lower bound on evntual should be defined. And also how long is eventual.
 
-## Time and Order
+## Chapter 3: Time and Order
 Other than distributed systems time is used by our personal computers as well, e.g to track how long a dns query is cacheable, or to track if a certificate is valid. Time helps in keeping track of the order of events in which they occured, and we care a lot about order since its easier to think about it by our brain, so time is an important property. 
 
 There are two types of clocks: 1. *Physical clock*: to count the number of seconds elasped 2. *Logical clocks*: count events such as messages sent  

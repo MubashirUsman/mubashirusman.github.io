@@ -109,7 +109,7 @@ Failure detectors are characterized by two properties: _completeness and accurac
 Completeness is easier to achieve than accuracy. In fact weak completeness can be transformed to strong completeness by broadcasting the information about suspected process. But avoiding incorrectly suspecting a non-faulty process is hard unless you have a hard limit on message delay. This is only possible in synchronous system model. Therefore in systems where **hard bounds are not set** on message delays, failure detectors can **only be eventually accurate**.
 
 The image below is taken from Chandra et al. (1996) paper.
-![Chandra et al.](image.png)
+![Chandra et al.](/assets/Chandra-et-al.png)
 
 This diagram shows that some problems can not be solved without strong assumptions about time bounds (failure detectors), it is not possible to tell whether a remote
 node has crashed, or is simply experiencing high latency. 

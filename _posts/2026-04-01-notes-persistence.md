@@ -4,7 +4,7 @@ title:  "About Data Persistence"
 date:   2026-03-31 13:09:00 +0000
 categories: distributed-systems
 ---
-## System Design from First Principles — Lecture 5 Persistence
+## System Design from First Principles — 5 Persistence
 
 ### 1. Fundamental challenge
 **Persistence is important** — you cannot afford to lose data. But disk is *slow*.
@@ -21,7 +21,7 @@ To make latency intuitive, imagine scaling nanoseconds to human time:
 | SSD       | 2 days        |
 | HDD       | 5 months      |
 
-> **Key insight:** We want persistence *and* speed. These two goals conflict — and the rest of this lecture is about how to reconcile them.
+> We want persistence *and* speed. These two goals conflict — and the rest of this lecture is about how to reconcile them.
 
 ---
 

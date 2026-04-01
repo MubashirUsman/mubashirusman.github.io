@@ -186,20 +186,21 @@ But this introduces a **consistency problem**: all three replicas might have sli
 Every persistence decision sits on a spectrum between maximum speed and maximum durability:
 
 ```
-High risk / High speed ◄─────────────────────────────────► Low risk / Low speed
+   |--------------------------------|---------------------------------|
+High risk / High speed                                 Low risk / Low speed
 
-  RAM /           fsync() +       Distributed        S3 /
-Buffered I/O        SSD           replication      Multi-region
+  RAM /                              fsync()            Distributed replication S3 /
+Buffered I/O                           SSD                 Multi-region
 ```
 
 #### Practical Decision Framework
 
-**Is it a like on a post?**
-→ It's okay if people see the count update with a 2–3 second delay.
-→ Use an **LSM tree** with buffered I/O. Optimise for throughput.
+**Is it a like on a TikTok post?**
+- It's okay if people see the count update with a 2–3 second delay.
+- Use an **LSM tree** with buffered I/O. Optimise for throughput.
 
 **Is it a bank transfer?**
-→ Data loss is unacceptable.
-→ Use **`fsync()`** and wait for *all* replicas to reply before returning success. Optimise for durability.
+- Data loss is unacceptable.
+- Use **`fsync()`** and wait for *all* replicas to reply before returning success. Optimise for durability.
 
 ---

@@ -1,10 +1,10 @@
 ---
 layout: post
-title:  "About Data Persistence"
-date:   2026-03-31 13:09:00 +0000
+title:  "Notes on Data Persistence"
+date:   2026-04-01 13:09:00 +0000
 categories: distributed-systems
 ---
-## System Design from First Principles — 5 Persistence
+## System Design from First Principles — Part 5 Persistence
 
 ### Fundamental challenge
 **Persistence is important** — you cannot afford to lose data. But disk is *slow*.

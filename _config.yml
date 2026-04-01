@@ -17,6 +17,8 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
+site:
+  future: true
 
 title: Mubashir Usman's Blog
 email: mubashirusman016 at gmail dot com

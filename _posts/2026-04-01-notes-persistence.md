@@ -2,7 +2,7 @@
 layout: post
 title:  "About Data Persistence"
 date:   2026-04-01 13:09:00 +0000
-categories: distributed-systems system-design
+categories: distributed-systems
 ---
 ## System Design from First Principles — Lecture 5 Persistence
 

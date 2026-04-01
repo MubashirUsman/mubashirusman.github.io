@@ -6,7 +6,7 @@ categories: distributed-systems
 ---
 ## System Design from First Principles — 5 Persistence
 
-### 1. Fundamental challenge
+### Fundamental challenge
 **Persistence is important** — you cannot afford to lose data. But disk is *slow*.
 The goal: data that survives power outages *and* systems that feel fast.
 
@@ -25,7 +25,7 @@ To make latency intuitive, imagine scaling nanoseconds to human time:
 
 ---
 
-### 2. Databases & The OS Lie
+### Databases & The OS Lie
 
 #### Buffered I/O
 
@@ -47,7 +47,7 @@ Process          Page Cache (RAM)         Disk
 
 ---
 
-### 3. Write-Ahead Log (WAL)
+### Write-Ahead Log (WAL)
 
 Instead of writing directly to tables (random I/O), databases **append every write to the end of a log file** first — the Write-Ahead Log.
 
@@ -66,7 +66,7 @@ WAL converts random writes into **sequential writes**, which are dramatically fa
 
 ---
 
-### 4. SSD Internals — Write Amplification
+### SSD Internals — Write Amplification
 
 A common misconception: **SSD is not fast RAM**. You cannot overwrite or delete a single byte on an SSD. You can only erase in large chunks (~2 MB blocks).
 
@@ -89,7 +89,7 @@ The **FTL** is a small orchestrator embedded in every SSD. It manages physical e
 
 ---
 
-### 5. B-Tree — Shallow and Fat
+### B-Tree — Shallow and Fat
 
 Without an index, every query is a full table scan. The **B-Tree** solves this: optimized for reads, keeping itself shallow by making each node very wide (many children).
 
@@ -106,7 +106,7 @@ Layer 4:         125 million nodes → 62.5 billion items
 
 ---
 
-### 6. LSM Tree — Log-Structured Merge Tree
+### LSM Tree — Log-Structured Merge Tree
 
 The B-Tree is optimized for reads. The **LSM Tree** makes the opposite bet: optimize for writes. Used by **Cassandra**, **RocksDB**, and other NoSQL engines.
 
@@ -137,7 +137,7 @@ If the Bloom filter says no, the SSTable is not even touched. This dramatically 
 
 ---
 
-### 7. The RUM Conjecture
+### The RUM Conjecture
 
 A fundamental trade-off in data structure design — you can optimise for any **two** of the three, but never all three simultaneously:
 
@@ -163,7 +163,7 @@ U (Update) ────────────── M (Memory)
 
 ---
 
-### 8. The Invisible Enemy — Bit Rot
+### The Invisible Enemy — Bit Rot
 
 Even at rest, data can silently corrupt. Cosmic rays, voltage fluctuations, and magnetic interference can flip bits without the OS noticing. **Do not trust hardware.**
 
@@ -181,7 +181,7 @@ But this introduces a **consistency problem**: all three replicas might have sli
 
 ---
 
-### 9. The Big Trade-Off Spectrum
+### The Big Trade-Off Spectrum
 
 Every persistence decision sits on a spectrum between maximum speed and maximum durability:
 

@@ -73,14 +73,14 @@ TCP Handshake[85ms] + TLS trip[85ms] + HTTP[85ms] = 225ms
 > one RTT 10ms per 1000KM
 
 ### QUIC
-TCP should be used for rare and long lived connections. QUIC (built on UDP) combines TCP and TLS handshake, so network latency from LONDON to San Francisco becomes: TCP Handshake and TLS trip[85ms] + HTTP[85ms] = 170ms. For returning users this will reduce to 85ms or 0-RTT, using CDN the edge server can keep an open TCP connection with root server and this latency can be further reduced.
+TCP should be used for rare and long lived connections. QUIC (built on UDP) combines TCP and TLS handshake, so network latency from LONDON to San Francisco becomes: TCP Handshake and TLS trip[85ms] + HTTP[85ms] = 170ms. This is 1-RTT instead of 2-RTT in TCP. For returning users this will reduce to 85ms or 0-RTT, using CDN the edge server can keep an open TCP connection with root server and this latency can be further reduced.
 
 ### HTTP2
-HTTP2 sends all requests using single TCP connection (connection pooling), and if combined with ptotobuf then serialization and deserialization cost can be saved.
+HTTP2 sends all requests using single TCP connection (multiplexing, connection pooling), and if combined with ptotobuf then serialization and deserialization cost can be saved.
 
 Apache Arrow defines standard memory layout, achieves zero copy deserialization when data on network cable, on disk and in the ram is identical.
 
-> Good rules of thumb: **Batching** send one request with many little things, **Data locality** if two services communicate too much, consider making them one, **Coarse grained API** is not too chatty
+> Good rules of thumb for API design: **Batching** send one request with many little things, **Data locality** if two services communicate too much, consider making them one, **Coarse grained API** is not too chatty
 ---
 
 ## Part 4 Anatomy of a Request

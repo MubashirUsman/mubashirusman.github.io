@@ -43,6 +43,7 @@ Here `s` is the fraction of task to be done serially, and `n` is the number of p
 
 ### Data access latency
 This table shows cpu access time for different storage medias.
+
 | Storage   | Scaled Latency| Actual Latency  |
 |-----------|---------------|-----------------|
 | L1 Cache  | 0.5 seconds   | 1-4 nano sec    |

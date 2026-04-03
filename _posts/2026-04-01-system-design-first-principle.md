@@ -1,10 +1,102 @@
 ---
 layout: post
-title:  "Notes on Data Persistence"
+title:  "Notes on System Design from First Principles"
 date:   2026-04-01 13:09:00 +0000
 categories: distributed-systems
 ---
-## System Design from First Principles — Part 5 Persistence
+
+# System Design from First Principles
+
+## Part 1,2 Physics of data
+
+Data fetch time depends on distance it has to travel, more frequently the data needs to be accessed the close it should be to CPU.
+
+**Little's law** - `L = λW`
+- L = average number of requests in the system
+- λ = rate of requests coming in
+- W = average time it takes in the system, so load on a system is proportional to the time taken to process a request.
+
+Average latency does not give true picture of delays so we use percentiles, such as 99^th^ means the 1 percent of requests that faced highest delay.
+
+For reliability, instead of using uptime it can be defined in terms of successful number of responses with respect to total responses. Uptime can be misleading as for a distributed service, our service will remain available in some parts of the world at all times.
+
+System should be run at less capacity than it can handle, for example 70% CPU usage, the rest should be left for unexpected load spike to protect the system from creating a cascade failure. In fact its a tradeoff between resource wastage and avoiding exponential increase in latency in the face of high traffic.
+
+**Amdahl's law** speed of doing a task is limited by the serial fraction of the task(the one that can not be parallelized).
+```
+     1
+------------
+    (1-s)
+s + -----
+      n
+```
+Here `s` is the fraction of task to be done serially, and `n` is the number of processors. E.g if code is 95% parallelizable and 5% is serial and n goes to so large that fractional part becomes zero, then (1/0.05) = 20, even if n is infinity, we can not achieve more speed than 20 times.
+
+### Four golden signals
+- Latency, time to service a request, we should track P50, P90, P99
+- Traffic, the demand of the system or number of requests coming in
+- Errors, ratio of failed requests to the total requests
+- Saturation, how full is the system, such as database connection pool, cpu usage etc
+---
+
+## Part 3 Communication
+
+### Data access latency
+This table shows cpu access time for different storage medias.
+| Storage   | Scaled Latency| Actual Latency  |
+|-----------|---------------|-----------------|
+| L1 Cache  | 0.5 seconds   | 1-4 nano sec    |
+| RAM       | 2 minutes     | 100+ nano sec   |
+| SSD       | 2 days        | 25-100 micro sec|
+| HDD       | 5 months      | 5-10 mili sec   |
+
+A network call is expensive due to: **Latency due to network calls**
+> (1) it needs to do a dns query (2) needs to do TCP 3-way handshake, (3) TLS handshake (4) calculate encryption keys (5) invisible timeouts 
+
+### Serialization Latency
+Serialization is expensive: **Latency due to serialization**
+Constructing json objects to be sent on the network from Java objects (serialization) is CPU intensive (requires to do string manipulation). Instead of JSON, we can use other techniques to serialize data.
+
+| JSON                         | Protobuf OR Flat buf                     |
+|------------------------------|------------------------------------------|
+| {"id": 5, "status": active}  | bytes                                    |
+| CPU needs to do json parsing | CPU copies bytes so no parsing is needed |
+| Not good for high performance| Good for high performance                |
+
+> flat buffers > protobuffers > json
+
+### Network Latency
+Speed of light in fiber optic is a hard limit on data transfer speed, a total distance from London to San Francisco is 8500 KM, and one trip from London to San Francisco would take 85ms, so with HTTP/1.1 and TLS/1.2 we can calculate total round trip time for one http request sent,
+TCP Handshake[85ms] + TLS trip[85ms] + HTTP[85ms] = 225ms
+
+> one RTT 10ms per 1000KM
+
+### QUIC
+TCP should be used for rare and long lived connections. QUIC (built on UDP) combines TCP and TLS handshake, so network latency from LONDON to San Francisco becomes: TCP Handshake and TLS trip[85ms] + HTTP[85ms] = 170ms. For returning users this will reduce to 85ms or 0-RTT, using CDN the edge server can keep an open TCP connection with root server and this latency can be further reduced.
+
+### HTTP2
+HTTP2 sends all requests using single TCP connection (connection pooling), and if combined with ptotobuf then serialization and deserialization cost can be saved.
+
+Apache Arrow defines standard memory layout, achieves zero copy deserialization when data on network cable, on disk and in the ram is identical.
+
+> Good rules of thumb: **Batching** send one request with many little things, **Data locality** if two services communicate too much, consider making them one, **Coarse grained API** is not too chatty
+---
+
+## Part 4 Anatomy of a Request
+
+- URL in browser memory -> syscall connect() -> context switch to TCP/IP stack -> 
+- MTU limit on packet is 1500 Bytes and TCP header comes in
+- IP address needs to be searched and DNS comes in, Geo-DNS gives IP according to location of user
+- Ethernet header
+- After leaving ISP, BGP comes in and it decides on which path to choose for the given destination
+- Anycast help BGP by announcing same IP from different locations
+- Edge server comes in, TLS is terminated, since TCP handshake is expensive so edge server uses existing warm TCP connection to root server
+- Firewall for DPI, packet inspection is expensive so keep it as close to edge as possible
+- Load balancer, layer 7
+- API gateway, does user exist and is JWT token valid, rate limiting, protocol translation REST to gRPC
+---
+
+## Part 5 Persistence
 
 ### Fundamental challenge
 **Persistence is important** — you cannot afford to lose data. But disk is *slow*.

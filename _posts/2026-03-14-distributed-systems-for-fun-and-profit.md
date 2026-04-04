@@ -122,3 +122,89 @@ When is order/synchronicity really needed? It depends on a system in considerati
 information with no inconsistency. In other cases, it is acceptable to give an answer that only represents the best known estimate that is based on only a subset of the total information. In particular during a network partition, one may want to answer queries with only part of the system accessible. For example, is the Twitter follower count for some user X, or X+1? Or are movies A, B and C the absolutely best answers for some query? Doing a cheaper, mostly correct "best effort" can be acceptable.
 
 ---
+
+## Chapter 4: Replication
+
+Replication problem provides context to many other sub-problems of distributed systems, leader election, consensus, failure detection.
+
+| Synchronous   | Asynchronous   |
+|---|---|
+| Client waits, and all nodes must recieve update and should acknowledge to master   | Response is sent back to user immidiately |
+|   |   |
+|   |   |
+|   |   |
+
+### Primary/Backup replication
+
+**Provides Weak Consistency and not partition tolerant**
+
+In this master gets all updates and log of operations is sent to the replicas. Two variants:
+- **Asynchronous** Pri/Backup replication: can work with one message _update_
+- **Synchronous** Pri/Backup replication: requires two messages _update + acknowledge receipt_
+
+MySQL by default uses the asynchronous varient. Any asynchronous replication algorithm can only provide weak durability guarantees. In MySQL replication, this is known as replication lag. So replicas are always one operation behind the master. If master fails then the updates that have not been sent to backups are lost.
+
+The synchronous variant of primary/backup replication ensures that writes have been stored on other nodes before returning back to the client - client waits, but this too can only provide weak guarantees. 
+> For example - if a primary receives a write and sends to replicas - the backup persists and ACKs the write - and then primary fails before sending ACK to the client - now client assumes that write failed but backups are already updated.
+
+**Primary/backup or log shipping schemes only offer best effort guarantees** Susceptible to failed updates and split brain, for example backup kicks in for a temporary network issue and then there will be two active primary at the same time.
+
+P/B has following properties:
+- Single, static master
+- Replicated log, slaves are not involved in executing operations
+- No bounds on replication delay
+- Manual/ad-hoc failover, not fault tolerant
+- Not partition tolerant
+
+### 2 Phase Commit
+
+**Provides Strong Consistency but not partition tolerant** also **NO AUTOMATIC RECOVERY** also **Prevents divergence**
+
+To prevent failures from causing consistency guarantees to be violated, we need another layer of messaging, leading us to 2PC. MySQL Cluster provides synchronous replication using 2PC.
+- First phase _voting_: primary sends update to the participent, each participent decides to commit or abort, if to commit then it stores the update in temporary area (write-ahead log). Until the second phase completes, this update is considered temporary.
+- Second phase _decision_: the primary decides the outcome and informs every participant. Then this update will be made permanent from temporary area.
+
+Having a second phase - _decision_ - in place before making a commit permanent allows the system to rollback the update which is not possible in P/C replication. 2PC is prone to blocking even if one node fails. It assumes stable storage - data on each node is never lost and node never crashes forever. The major tasks in 2PC are **ensuring writes are durable on disk** and **making sure that the right recovery decisions are made such as learning the outcome of a round and then updating/rolling back those changes locally**.
+
+> From CAP theorem, 2PC is CA. Its not partition tolerant. Also no safe way of promoting a new primary if one fails, a manual intervention is needed. Its latency sensitive as this is N-of-N write approach. Its **consistent**, NOT susceptible to split brain.
+
+2PC has these properties:
+- Unanimous vote: commit or abort
+- Static master
+- 2PC cannot survive simultaneous failure of the coordinator and a node during a commit
+- Not partition tolerant, tail latency sensitive
+
+### Consensus algorithms
+
+**Provides fault tolerance and single copy consistency**
+
+Partition tolerant consensus algorithms are **fault-tolerant** algorithms that maintain single-copy consistency. Paxos is well-known partition tolerant algorithm. 
+
+#### A network partition 
+It is the failure of a network link to one or several nodes. The nodes themselves continue to stay active. Network partitions are tricky as its not possible to distinguish between node being unreachable or a failed node. If its a partition, then the system is divided in two and nodes are active on both sides. 
+
+A system of three nodes, with a failure and a network partition: (![partition image](/assets/partition.png)). 
+
+A system designed to keep single-copy consistency should be able to break symmetry, otherwise a partition will result in two EQUAL systems. Or in other words make sure only one partition remains active in the event of partition. This is very important to keep single copy consistency.
+
+#### Majority decisions
+
+Requiring only **majority** of nodes - instead of all nodes to agree on updates - allows some nodes to be unavailable/unreachable or to be down. As long as **(N/2 + 1)-of-N** nodes are up and accessible, the system will continue to operate. Here N/2 is integer division. Partition tolerant consensus algorithms use odd number of nodes. Majority can also tolerate **disagreement**. Consensus algorithms for replication generally opt for having **distinct roles** for each node - leader and follower. All updates must pass through leader. Having roles does not mean the system is prevented from recovering from a failure, - via a **leader election phase**. Each period of normal operation is called an **epoch** during which only one is designated as leader. Raft uses the term epoch. Epochs are the logical clocks which allow nodes to identify when an outdated node starts communicating. Nodes that were partitioned or out of operation will have a smaller epoch number than the current one, and their commands are ignored.
+
+**Working of RAFT**:
+During normal operation, the leader maintains a heartbeat (at an **heartbeat inrerval**) which allows the followers to detect if the leader failed or becomes partitioned. When a node detects that a leader has become non-responsive, one of the follower nodes - whoseever **election timeout** expires first - it switches to an intermediate state (called "candidate" in Raft) where it increments the term/epoch value by one, initiates a leader election and competes to become the new leader. In order to be elected a leader, a node must receive a majority of the votes. Raft has recently seen adoption in _etcd_ inspired by ZooKeeper.
+
+**Working of Paxos**
+**In Paxos** in some cases - such as if two proposers are active at the same time (dueling); if messages are lost; or if a majority of the nodes have failed - then no proposal is accepted by a majority. But this is acceptable, since the decision rule for what value to propose converges towards a single value. According to the FLP impossibility result, this is the best we can do: algorithms that solve the consensus problem must either give up safety or liveness when the guarantees regarding bounds on message delivery do not hold. Paxos gives up liveness.
+
+A Consensus based fault tolerant algorithm such as Paxos has following:
+- Majority vote
+- Dynamic master
+- Paxos is less sensitive to tail latency.
+- Robust to n/2-1 simultaneous failures as part of protocol
+
+Paxos is one of the most important algorithms when writing **strongly consistent partition tolerant replicated systems**. It is used in many of Google's systems, including the Chubby lock manager used by BigTable/Megastore, the Google File System as well as Spanner. The implementation issues of Paxos mostly relate to the fact that Paxos is described in terms of a single round of consensus decision making, but an actual working implementation usually wants to run multiple rounds of consensus efficiently.
+
+**ZAB: Zookeeper atomic broadcast** is used in Apache Zookeeper. It provides coordination primitives for distributed systems, and is used by Kafka. Technically, atomic broadcast is a problem different from pure consensus, but it still falls under the
+category of partition tolerant algorithms that ensure strong consistency.
+

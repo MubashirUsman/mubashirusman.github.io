@@ -37,6 +37,7 @@ Here `s` is the fraction of task to be done serially, and `n` is the number of p
 - Traffic, the demand of the system or number of requests coming in
 - Errors, ratio of failed requests to the total requests
 - Saturation, how full is the system, such as database connection pool, cpu usage etc
+
 ---
 
 ## Part 3 Communication
@@ -81,6 +82,7 @@ HTTP2 sends all requests using single TCP connection (multiplexing, connection p
 Apache Arrow defines standard memory layout, achieves zero copy deserialization when data on network cable, on disk and in the ram is identical.
 
 > Good rules of thumb for API design: **Batching** send one request with many little things, **Data locality** if two services communicate too much, consider making them one, **Coarse grained API** is not too chatty
+
 ---
 
 ## Part 4 Anatomy of a Request

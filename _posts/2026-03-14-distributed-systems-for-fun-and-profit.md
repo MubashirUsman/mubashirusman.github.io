@@ -31,7 +31,7 @@ Stronger consistency allows you to program the system as if the underlying syste
 ## Chapter 2: Up and Down the Level of Abstraction
 
 The fundamental tension is between how we want the system to behave, i.e as a single unit and how the system actually is, distributed. So we create abstractions, we assume that two nodes are equal even when they are not, this makes things easier and manageable. __Impossible results__ tell us that within our assumptions some things are impossible. In a distributed system, programs run concurrently on independent nodes, there is an unreliable network between them, and they have no shared memory or shared clock. This means that the knowledge in a particular node is local, any information about global state is normally out of date, clocks are not synchronized, nodes can fail and recover from a failure independently. A robust system would be that makes little or no assumtions. And we can also make a system with strong assumptions, e.g nodes do not fail a big assumption and system will not need to handle node failure, though this unrealistic assumption.  
-- Nodes can fail by __crashing__ or in any arbitrary way other than crashing (__Byzantine fashion__). We only consider crash failure because we can't account infinite number of failures and then design our algorithm.  
+- Nodes can fail by __crashing__ or in any arbitrary way other than crashing (__Byzantine fashion__). We only consider crash failure because we can't account other infinite number of failures and then design our algorithm. For example a hacker could hack into the machine but we don't take such failures into account.  
 - Communication links can be assumed to be __unreliable__ and subject to __message losts__/delays. A __network partition__ occurs when a network fails between nodes but nodes continue to be operational. These are enough assumptions without going into details of individual network links or counting distance between nodes (in a local network).  
 - Timing assumptions are essential as the nodes have their own clocks and are at some distance from each other. Synchronous system where there exist __upper bound on message transmission delays__, and asynchronous where processes execute independently without any upper bound. Synchronous means that two processes have the same experience and messages sent will be received within a maximum delay, and processes execute in a lock step. Asynchronous assumes that we can't rely on timing, and assumtions about execution speeds, maximum message delays can help rule out failure scenarios as if they never happened. Real world systems can run occasionally processes within upper bounds but there are certainly times when there are delays and message loss.
 
@@ -178,6 +178,7 @@ Having a second phase - _decision_ - in place before making a commit permanent a
 
 **Provides fault tolerance and single copy consistency**
 
+Concensus is agreeing on **one result** by a **majority**.
 Partition tolerant consensus algorithms are **fault-tolerant** algorithms that maintain single-copy consistency. Paxos is well-known partition tolerant algorithm. 
 
 #### A network partition 
@@ -205,6 +206,13 @@ A Consensus based fault tolerant algorithm such as Paxos has following:
 
 Paxos is one of the most important algorithms when writing **strongly consistent partition tolerant replicated systems**. It is used in many of Google's systems, including the Chubby lock manager used by BigTable/Megastore, the Google File System as well as Spanner. The implementation issues of Paxos mostly relate to the fact that Paxos is described in terms of a single round of consensus decision making, but an actual working implementation usually wants to run multiple rounds of consensus efficiently.
 
+Paxos defines three roles - **proposers**, **acceptors**, **learners** Paxos nodes can take mutiple roles, even all of them. Paxos nodes should know how many nodes a majority is in a non-symmetrical system. Paxos runs on unreliable network, messages can be lost and Paxos nodes are persistent - meaning they can't forget what they accepted. A paxos run aims at reaching **single consesus**, so if consesus is made, it can not progress to another consensus. 
+
+> If majority of acceptors have promised to ignore anything lower than an ID, any ID lower than that ID will be ignored. E.g: if proposerA sends a REQUEST for ID=4, and get a PROMISE from majority of acceptors for this ID=4, then it sends a ACCEPT-REQUEST with _ID, value_ and acceptors accept it and reply with ACCEPT _value_. Now if another proposer with higher ID than 4 comes in and sends REQUEST ID=5, then it will get PROMISE from acceptors but also a _piggyback_ value previously accepted.  
+
+The following pictures illustrate a consesus run in Paxos. ![Paxos algorithm.](/assets/paxos-algorithm.png)
+
 **ZAB: Zookeeper atomic broadcast** is used in Apache Zookeeper. It provides coordination primitives for distributed systems, and is used by Kafka. Technically, atomic broadcast is a problem different from pure consensus, but it still falls under the
 category of partition tolerant algorithms that ensure strong consistency.
 
+---

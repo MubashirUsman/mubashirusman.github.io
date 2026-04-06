@@ -192,10 +192,10 @@ A system designed to keep single-copy consistency should be able to break symmet
 
 Requiring only **majority** of nodes - instead of all nodes to agree on updates - allows some nodes to be unavailable/unreachable or to be down. As long as **(N/2 + 1)-of-N** nodes are up and accessible, the system will continue to operate. Here N/2 is integer division. Partition tolerant consensus algorithms use odd number of nodes. Majority can also tolerate **disagreement**. Consensus algorithms for replication generally opt for having **distinct roles** for each node - leader and follower. All updates must pass through leader. Having roles does not mean the system is prevented from recovering from a failure, - via a **leader election phase**. Each period of normal operation is called an **epoch** during which only one is designated as leader. Raft uses the term epoch. Epochs are the logical clocks which allow nodes to identify when an outdated node starts communicating. Nodes that were partitioned or out of operation will have a smaller epoch number than the current one, and their commands are ignored.
 
-**Working of RAFT**:
+##### **Working of RAFT**
 During normal operation, the leader maintains a heartbeat (at an **heartbeat inrerval**) which allows the followers to detect if the leader failed or becomes partitioned. When a node detects that a leader has become non-responsive, one of the follower nodes - whoseever **election timeout** expires first - it switches to an intermediate state (called "candidate" in Raft) where it increments the term/epoch value by one, initiates a leader election and competes to become the new leader. In order to be elected a leader, a node must receive a majority of the votes. Raft has recently seen adoption in _etcd_ inspired by ZooKeeper.
 
-**Working of Paxos**
+##### **Working of Paxos**
 **In Paxos** in some cases - such as if two proposers are active at the same time (dueling); if messages are lost; or if a majority of the nodes have failed - then no proposal is accepted by a majority. But this is acceptable, since the decision rule for what value to propose converges towards a single value. According to the FLP impossibility result, this is the best we can do: algorithms that solve the consensus problem must either give up safety or liveness when the guarantees regarding bounds on message delivery do not hold. Paxos gives up liveness.
 
 A Consensus based fault tolerant algorithm such as Paxos has following:
@@ -208,11 +208,16 @@ Paxos is one of the most important algorithms when writing **strongly consistent
 
 Paxos defines three roles - **proposers**, **acceptors**, **learners** Paxos nodes can take mutiple roles, even all of them. Paxos nodes should know how many nodes a majority is in a non-symmetrical system. Paxos runs on unreliable network, messages can be lost and Paxos nodes are persistent - meaning they can't forget what they accepted. A paxos run aims at reaching **single consesus**, so if consesus is made, it can not progress to another consensus. 
 
-> If majority of acceptors have promised to ignore anything lower than an ID, any ID lower than that ID will be ignored. E.g: if proposerA sends a REQUEST for ID=4, and get a PROMISE from majority of acceptors for this ID=4, then it sends a ACCEPT-REQUEST with _ID, value_ and acceptors accept it and reply with ACCEPT _value_. Now if another proposer with higher ID than 4 comes in and sends REQUEST ID=5, then it will get PROMISE from acceptors but also a _piggyback_ value previously accepted.  
+> If majority of acceptors have promised to ignore anything lower than an ID, any ID lower than that ID will be ignored. E.g: if proposerA sends a PREPARE for ID=4, and get a PROMISE from majority of acceptors for this ID=4, then it sends a ACCEPT-REQUEST with _ID, value_ and acceptors accept it and reply with ACCEPT _value_. Now if another proposer with higher ID than 4 comes in and sends REQUEST ID=5, then it will get PROMISE from acceptors but also a _piggyback_ value previously accepted.  
+
+WHAT IF **Proposer fails in PREPARE Phase**: then acceptors who have sent PROMISE will wait but upon receiving no response from Proposer, another proposer will send a PREPARE message with its own different higher ID. SO Paxos goes on.
+
+WHAT IF **Proposer fails after sending ACCEPT-REQUEST and before getting ACCEPT**: then another proposer will come up with higher ID and send a PREPARE and acceptors will send a PROMISE, but with a piggyback value they already have accepted will also be sent. And then this proposer will accept the response and give up on its value.
 
 The following pictures illustrate a consesus run in Paxos. ![Paxos algorithm.](/assets/paxos-algorithm.png)
 
-**ZAB: Zookeeper atomic broadcast** is used in Apache Zookeeper. It provides coordination primitives for distributed systems, and is used by Kafka. Technically, atomic broadcast is a problem different from pure consensus, but it still falls under the
+##### **ZAB: Zookeeper atomic broadcast** 
+It is used in Apache Zookeeper. It provides coordination primitives for distributed systems, and is used by Kafka. Technically, atomic broadcast is a problem different from pure consensus, but it still falls under the
 category of partition tolerant algorithms that ensure strong consistency.
 
 ---

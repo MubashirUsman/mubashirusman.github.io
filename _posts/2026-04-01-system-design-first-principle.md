@@ -282,7 +282,7 @@ Every persistence decision sits on a spectrum between maximum speed and maximum 
 
 ```
    |--------------------------------|---------------------------------|
-High risk / High speed                                 Low risk / Low speed
+High risk / High speed              ### 1.                    Low risk / Low speed
 
   RAM /                              fsync()            Distributed replication S3 /
 Buffered I/O                           SSD                 Multi-region
@@ -297,5 +297,200 @@ Buffered I/O                           SSD                 Multi-region
 **Is it a bank transfer?**
 - Data loss is unacceptable.
 - Use **`fsync()`** and wait for *all* replicas to reply before returning success. Optimise for durability.
+
+---
+
+## Part 6: How to Choose a Database
+
+### The Golden Rule
+
+> **Choose a database based on how you will *access* the data later, not how it looks.**
+
+Audit your **access patterns** first. The shape of your queries determines the right database — not the shape of your data.
+
+### Relational Databases (SQL)
+
+**Core idea:** Data is stored in tables and can be queried with flexibility. 
+
+- Store every fact exactly once. This is the concept of **normalisation**.
+- ACID guarantees are provided by relational databases.
+- Data is spread across flat tables, and **joins** combines them together at query time.
+
+**The cost of joins**
+A join means going to a **different location on disk** for each related row. This is **random I/O** — slow and expensive.
+
+```
+Table A (disk location 1) ──JOIN──► Table B (disk location 2)
+                                          └──► Table C (disk location 3)
+```
+
+> Flat tables in SQL = objects in Java. Normalisation is the mismatch you pay at the database layer to avoid redundancy.
+
+---
+
+### NoSQL — Key-Value Store
+
+**Core idea:** Save a value, get it back by key. That's it.
+
+- Internally a **K-V hash map**
+- Lookup is **O(1)**
+- You **cannot** query by anything other than the stored key — unlike SQL
+- You cannot do aggregations, filters, or joins
+
+```
+set("user:42", { name: "Alice", age: 30 })
+get("user:42")  ──►  { name: "Alice", age: 30 }
+```
+
+**Examples:** Redis, DynamoDB, Memcached
+
+**Use when:** you know the exact key and just need to retrieve a value fast.
+
+---
+
+### NoSQL — Document Database
+
+**Core idea:** Save all related data in one document. Just dump the JSON. Store everything at **one spot on disk**.
+
+- Trades **normalisation** for **data locality**
+- No joins needed — all data for an entity lives together
+- Downside: leads to **redundancy** (same data duplicated across documents)
+
+```json
+{
+  "user_id": 42,
+  "name": "Alice",
+  "orders": [
+    { "item": "Book", "price": 12.99 },
+    { "item": "Pen",  "price": 1.49 }
+  ]
+}
+```
+
+**Examples:** MongoDB, CouchDB
+
+| Use when | Avoid when |
+|----------|------------|
+| Data is **self-contained** | Data is **interconnected** |
+| You read one entity at a time | You need cross-document queries |
+| Schema evolves frequently | Strong consistency is required |
+
+---
+
+### NoSQL — Graph Database
+
+**Core idea:** Relationships are **first-class citizens**. Data is stored using pointers between nodes.
+
+- In SQL, relationships are implicit (foreign keys, joins)
+- In a graph DB, the relationship edge is an actual stored object with properties
+- Traversing connections is cheap — no joins, just pointer-following
+
+```
+(Alice) ──[FOLLOWS]──► (Bob) ──[FOLLOWS]──► (Carol)
+  └──────[LIKES]──────► (Post #7)
+```
+
+**Examples:** Neo4J
+
+**Use when:** your access pattern is "find all friends of friends" or "what path connects A to B?" — i.e., highly connected, graph-shaped data.
+
+---
+
+### NewSQL — Best of Both Worlds
+
+**Examples:** Google Spanner, CockroachDB
+
+NewSQL databases give you:
+- SQL **ACID interface** (familiar query model)
+- ACID **guarantees** (correctness)
+- **Horizontal scaling** (scale out like NoSQL)
+
+They use a **consensus algorithm** (e.g. Paxos, Raft) to agree on writes across nodes.
+
+> **Trade-off:** You trade individual write speed for horizontal scale. Each write is slower because it must be agreed upon by multiple nodes.
+
+---
+
+### The Decision Framework — Audit Your Access Pattern
+
+| Query type | DB model | Example |
+|---|---|---|
+| Give me this exact id | **Key-Value** | Redis |
+| Summary / aggregation | **Relational** | Postgres |
+| Self-contained entity | **Document** | MongoDB |
+| Find similar items / embeddings | **Vector** | Pinecone, pgvector |
+| Social graph / connections | **Graph** | Neo4J |
+
+#### Why Postgres is often the default
+
+Postgres alone supports all three of:
+- **Index lookup** → behaves like a K-V store
+- **JSON columns** → behaves like a document store
+- **Full SQL model** → relational queries, aggregations, joins
+
+Unless your access pattern is extreme (massive write throughput, purely graph-shaped data), Postgres handles it.
+
+---
+
+### 8. Schema on Write vs. Schema on Read
+
+```
+Schema on Write (SQL)          │  Schema on Read (NoSQL)
+───────────────────────────────│────────────────────────────────
+Define schema first,           │  Start writing immediately,
+then write data                │  define schema in application code
+                               │
+Enforced at the DB layer       │  Enforced at the application layer
+                               │
+Migration required to          │  Old + new field names must both
+change a field name            │  be supported in code
+```
+
+> **The schema always exists.** In SQL it lives in the database. In NoSQL it lives in your code. If you change a field name in NoSQL, your codebase must now handle both the old and new name simultaneously — in every service that reads that data.
+
+Flexibility in NoSQL is real, but it comes with a hidden cost that compounds over time.
+
+---
+
+### Multi-Model Databases
+
+**Examples:** Azure Cosmos DB, ArangoDB
+
+These let you store data in **multiple models within the same database** — relational, document, and graph, all in one system. Useful when a single product needs several access patterns without managing multiple separate databases.
+
+---
+
+### Vector Databases
+
+**Use case:** "Find me photos similar to this one."
+
+Vector DBs store **embeddings** (high-dimensional numerical representations of data) and let you search by **similarity** rather than exact match. This is the engine behind recommendation systems, semantic search, and image search.
+
+---
+
+> The key is that every model has a tax. Each database model optimises for something — and pays a price somewhere else:
+
+| Model | What you gain | What you pay |
+|---|---|---|
+| **Relational** | Flexibility, normalisation | **Join tax** (random I/O) |
+| **Key-Value** | O(1) lookup speed | **Query tax** (no filtering, no aggregation) |
+| **Document** | Data locality, no joins | **Relational tax** (redundancy, no cross-doc queries) |
+| **Graph** | Cheap relationship traversal | **Search tax** (poor at non-graph queries) |
+
+---
+
+## Polyglot Persistence
+
+Large systems often use **multiple databases** — one for each access pattern. This is called **polyglot persistence**.
+
+**Example: Netflix**
+
+| Data | Database | Reason |
+|---|---|---|
+| User profiles | **Postgres** | Relational, ACID, flexible queries |
+| View history | **Cassandra** | High write throughput (LSM tree) |
+| Recommendations | **Redis** | Fast K-V cache, sub-millisecond reads |
+
+> Different parts of the same product have different access patterns. Use the right tool for each.
 
 ---

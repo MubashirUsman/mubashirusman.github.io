@@ -221,3 +221,67 @@ It is used in Apache Zookeeper. It provides coordination primitives for distribu
 category of partition tolerant algorithms that ensure strong consistency.
 
 ---
+
+## Chapter 5: Replication, Weak Consistency Model Protocols
+
+Enforcing global order is difficult and expensive as discussed in single copy consistency. If a system enforce **single copy consistency** then it behaves like a single system, but its **bad for availability during a partition** of large systems. In addition to this(availability), in strongly consistent systems, for each operation often a majority of the nodes must be contacted, not once but twice. This is painful in systems that need to be geographically distributed to provide adequate performance.
+
+Eventual consistency expresses this idea: that nodes can for some time diverge from each other, but that eventually they will agree on the value. Main Ideas are:
+- System without using expensive co-ordination but still returns _usable_ value.
+- We can allow different replicas to diverge - for efficiency and allow partitions
+
+### Two Types of System Designs
+1. **Eventual consistency with probabilistic guarantees** Can detect conflicting writes at some later point, but does not guarantee sequential execution results.  
+Conflicting updates will sometimes result in overwriting a newer value with an older one.  
+Some annomalies can be expected during normal operations (or during partitions).
+
+2. **Eventual consistency with strong guarantees** This type of system guarantees that the results converge to a common value equivalent to some correct sequential execution.  
+Such systems do not produce any anomalous results, without any coordination you can build replicas of the same service, and those replicas can communicate in any pattern and receive the updates in any order, and they will eventually agree on the end result as long as they all see the same information.  
+
+**CRDT's** (convergent replicated data types) are data types that guarantee convergence to the same value in spite of network delays, partitions and message reordering.
+
+**The CALM (consistency as logical monotonicity)** If we can conclude that something is _logically monotonic_ (for example adding inputs only increases output), then it is also safe to _run without coordination_.
+
+> the most obvious characteristic of systems that do not enforce single-copy consistency is that they allow replicas to diverge from each other. Replicas can accept writes even when there is partition.
+
+When systems have diverged after receiving different updates during partition, what we would like is to happen is that applicas **converge** to the same result. Another way of saying is that messages can be **delivered in different order** to two replicas, because there is no coordination protocol for enforcing total order.
+
+### Amazon's Dynamo
+Its the best known system that offers high availability and weak consistency. Dynamo is an **eventually consistent, highly available key-value store**. A client can set a value like `set(key, value)` and get them by a key using `get(key)`.
+A Dynamo cluster consists of N peer nodes; each node has a set of keys which is it responsible for storing. Dynamo prioritizes availability over consistency. Replicas can diverge from each other, when a key is read, there is a read reconciliation phase that attempts to reconcile differences between replicas.  
+
+> If the data is not particularly important, then a weakly consistent system can provide better performance and higher availability at a lower cost than a traditional RDBMS.
+
+After accepting the write intially, there is a asynchronous replica synchronization task. This task ensures that nodes can catch up fairly rapidly even after a failure.
+
+#### Consistent Hashing
+
+The main idea is that **key can be mapped by a client to a set of nodes** responsible for storing it by a simple calculation. Means a client can locate keys without querying the system. Since hashing is faster than remote procedure call, so this saves resources.  
+
+#### Partial Quorums
+
+After knowing where a key should be stored, we need to do some work to persist the data. This is synchronous task. We will immediately write the value onto multiple nodes is to provide a higher level of durability (to prevent immediate node failure). 
+> Like Paxos and Raft, Dynamo does use quorum for replication, but they are partial quorums and not majority quorums. A strict quorum has the property that any two quorums in the set overlap in at least one node.
+
+*Partial quorums* do not have that property; this **means that a majority is not required** and that different subsets of the quorum may contain different versions of the same data. Client can choose `W-of-N` nodes required for a write to succeed; and user can specify the number of nodes `(R-of-N)` to be contacted during a read. W and R are variable. Increasing `W` means that writes will take more time but they will be more durable. And increasing `R` increases the probability of a read to be up to date. The usual recommendation is that `R + W > N`, because this means that the read and write quorums overlap in one node.
+
+e.g A typical configuration is `N = 3` (e.g. a total of three replicas for each value); this means that the user
+can choose between:
+
+```
+R = 1, W = 3; fast reads, slow writes
+R = 2, W = 2 favorable to both
+R = 3, W = 1 fast writes, slow reads
+```
+N is rarely more than 3, because keeping that many copies of large amounts of data around gets
+expensive!
+
+Dynamo's design has inpired many other systems, like `Apache's Cassandra (N = 3, R = 1, W = 1 default)` and `Basho's Riak (N = 3, R = 2, W = 2 default)`. 
+
+*Speed vs Efficiency*: When sending a read or write request, are all `N` nodes are asked to reply? Or only a number of nodes that are equal to the `minimum of either W or R`. Choosing **send-to-all N** means that it will be faster but less more messages will have to be sent/received. While choosing **send-to-minimum(R,W)** means it will be slower but efficient as less communciation will be needed.
+
+#### Is R+W > N means strong consistency?
+NO. Although with `R+W>N` the system can detect conflicts, because any read and write quorum share a common member. This guarantees that a previous write will be seen by a subsequent read. **However, this only holds if the nodes in N never change.**
+
+- This means that the quorums are no longer guaranteed to always overlap. Even `R = W = N` would not qualify, since while the quorum sizes are equal to N, the nodes in those quorums can change during a failure.
+- Dynamo is designed to be always writable, writes are allowed on both sides of a partition, which means that **for at least some time the system does not act as a single copy**. So calling R + W >N "strongly consistent" is misleading; the guarantee is merely **probabilistic** - which is not what strong consistency refers to.

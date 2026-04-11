@@ -432,7 +432,7 @@ Unless your access pattern is extreme (massive write throughput, purely graph-sh
 
 ---
 
-### 8. Schema on Write vs. Schema on Read
+### Schema on Write vs. Schema on Read
 
 ```
 Schema on Write (SQL)          │  Schema on Read (NoSQL)
@@ -479,7 +479,7 @@ Vector DBs store **embeddings** (high-dimensional numerical representations of d
 
 ---
 
-## Polyglot Persistence
+### Polyglot Persistence
 
 Large systems often use **multiple databases** — one for each access pattern. This is called **polyglot persistence**.
 
@@ -492,5 +492,324 @@ Large systems often use **multiple databases** — one for each access pattern. 
 | Recommendations | **Redis** | Fast K-V cache, sub-millisecond reads |
 
 > Different parts of the same product have different access patterns. Use the right tool for each.
+
+---
+
+## Part 7: The World of Sharding
+
+**Why Shard at All? — Physics Sets the Limits**
+
+Software abstraction can feel like an infinite universe, but physics imposes hard limits:
+**speed of light, temperature, IOPS, OOM (out of memory)**. A single machine will always
+have a ceiling.
+
+Before sharding, exhaust simpler options in order:
+
+| Option | Approach |
+|---|---|
+| 1. Optimise queries | Indexes, query rewrites, avoid N+1 |
+| 2. Delete old data | Archive or TTL old rows |
+| 3. Add a caching layer | Redis in front of the DB |
+| 4. Vertical scaling | Put it on a bigger machine |
+| 5. **Shard** | Only when the above fail |
+
+> **Conclusion:** The best way is to **not shard**. Sharding loses simplicity, loses joins,
+> and loses ACID transactions. It is the last resort.
+
+### 2. Sharding — Horizontal Scaling
+
+**Sharding** = split data into pieces across multiple servers. A **router** takes a
+**shard key** and routes the request to the correct server.
+
+Good shard key candidates: `user_id`, `tenant_id`, `europe_user`, `year_num`
+
+#### 2a. Range-Based Sharding — O(1) lookup
+
+```
+users 1      → 25,000   ──► Server 1
+users 25,001 → 50,000   ──► Server 2
+```
+
+**Problem:** Data is not uniform. All January data goes to Shard 1, all February data
+goes to Shard 2. If writes are time-based, a single shard receives *all* current writes.
+This is a **hot spot**.
+
+#### 2b. Hash-Based Sharding
+
+```
+id  ──►  hash(id)  ──►  hash(id) % N  ──►  Shard A / B / C
+         (md5, crc32)     modulo
+```
+
+**Advantages:**
+- Even sequential IDs are spread across different/random servers because of hashing
+- Guarantees even distribution
+- No hot spots - no single server gets all the load
+
+**Problem — Resharding storm:** When you add a server, `N` changes. Almost **(N-1)/N**
+of all keys need to move to a new location. Network bandwidth fills, CPU spikes,
+I/O is saturated. This is the **resharding storm**.
+
+---
+
+### 3. Consistent Hashing — Solving the Resharding Storm
+
+Developed at MIT. Used by **DynamoDB, Cassandra, Discord**. We map keys and servers on the hash circle output, so we are already making sure that all servers and keys are distributed in the equaivalent fashion.
+
+Imagine the output of a hash function (e.g. SHA1 → 160-bit integer) as a **ring** (circle).
+
+**How it works**
+
+**Step 1 — Map servers to the ring:**
+```
+Server A  →  12 o'clock
+Server B  →   4 o'clock
+Server C  →   8 o'clock
+```
+
+**Step 2 — Place data:** Hash the data's ID to get a point on the ring.
+e.g. `id 15` hashes to `2 o'clock`.
+
+**Step 3 — Find the owner:** Walk **clockwise** from the data's point until you hit a server.
+`2 o'clock` → walk clockwise → hit **Server B** at 4 o'clock. Server B owns this data.
+
+**Step 4 — Adding a new node:** Hash the new server → it lands between two existing servers.
+Only the data between the new server and its predecessor needs to move.
+
+> **Key property:** Adding 1 server to an N-server ring moves only **1/N** of data.
+> Compare to hash-based sharding where **(N-1)/N** of data moves.
+
+#### Virtual Nodes — Solving Uneven Distribution
+
+Servers may not land uniformly on the ring by chance.
+
+**Solution:** Pretend each physical server is **100 virtual servers**.
+- Server A → A1, A2, ... A100 (100 spots on the ring)
+- Server B → B1, B2, ... B100
+
+By the **law of large numbers**, these virtual nodes mix evenly across the ring,
+guaranteeing uniform distribution even with few physical servers.
+
+---
+
+### 4. The CAP Theorem
+
+When a **network partition** (communication failure between nodes) occurs, you must
+choose between **two** of:
+
+| Property | Meaning |
+|---|---|
+| **C** — Consistency | Every read returns the most recent write |
+| **A** — Availability | Every request gets a response (not guaranteed to be latest) |
+| **P** — Partition Tolerance | The system keeps working despite network failures |
+
+> Partition tolerance is non-negotiable in distributed systems. So the real choice is
+> **CP vs AP** when a partition happens.
+
+**CP Systems**
+- Always correct data
+- Strong guarantees
+- **Can be unavailable** during a partition
+- Slower
+- **Examples:** Banks, stock trading, inventory systems, **Postgres**
+
+**AP Systems**
+- Always available
+- Fast and responsive
+- **Temporarily inconsistent** during a partition
+- Eventual consistency only
+- Partial Quorums
+- **Examples:** Caching systems, DNS, social media, **DynamoDB, Cassandra**
+
+---
+
+### 5. PACELC Theorem — Beyond CAP
+
+CAP only describes behaviour *during* a partition. **PACELC** extends it to normal operation:
+
+```
+If Partitioned  →  choose: Availability  vs  Consistency
+Else (normal)   →  choose: Latency       vs  Consistency
+```
+
+#### The Two Replication Strategies
+
+```
+DB with Primary + 2 Replicas:
+            Primary
+           /       \
+      Replica 1   Replica 2
+```
+
+**If Consistency > Latency (C > L) — Synchronous Replication:**
+```
+Write arrives → Primary writes → waits for ALL replicas to confirm → tells user "success"
+If primary fails and replicas have not returned confirmation, then no problem primary has also not made the write.  
+If the primary fails when replicas have already written but primary crashed before hearing the conformation, then primary has not made the write, and client will be stuck in waiting for primary to answer. In this scenario a replica has to be promoted to primary manually(in 2PC) or automatically.
+
+```
+- Safe but slow
+- Example: **Postgres**
+- PACELC profile: CP / C (always consistent, can be slow)
+
+**If Latency > Consistency (L > C) — Asynchronous Replication:**
+```
+Write arrives → Primary writes locally → tells user "success" → updates replicas in background
+```
+- Fast but risky (replicas may lag behind)
+- Example: **DynamoDB / Cassandra**
+- PACELC profile: AP / L (fast normally, inconsistent during partition)
+
+
+### 6. Consistency Spectrum (Consistency Models)
+
+Weaker consistency = faster system. **Pick the weakest model you can tolerate.**
+
+#### Eventual Consistency
+Replicas will *eventually* agree, but reads may return stale data temporarily.
+
+Sub-guarantees you can layer on top:
+
+| Model | Guarantee | Implementation |
+|---|---|---|
+| **Read-your-writes** | After you write, *you* always see your own write (others may not yet) | Pin user's connection to same replica for a few seconds |
+| **Monotonic reads** | Once you've seen version V2, you never see V1 again | Route user's reads to same replica consistently |
+| **Causal consistency** | Cause always appears before effect | Track causal dependencies between operations |
+
+---
+
+### 7. Conflict Resolution — When Two Nodes Disagree
+
+When two nodes get updated simultaneously/during partition with different data, you need a conflict resolution strategy to merge:
+
+#### Strategy 1 — Last Write Wins (LWW)
+- Simple but dangerous
+- Uses timestamps to determine which write is "latest"
+- **Cassandra uses this by default**
+- **Problem:** Clock skew between servers can silently discard valid writes — data loss with no error
+
+#### Strategy 2 — Vector Clocks (Version Vectors)
+- Each node keeps a counter tracking how many times it has seen each version
+- Can detect whether updates are **descendant** (one is newer) or **concurrent** (happened independently)
+- If concurrent → **store both versions**, surface the conflict to the application
+- **DynamoDB uses this** — you may see duplicate items that won't be auto-deleted
+- Application code must resolve the conflict
+
+```
+Node A: {A:1, B:0}  ──► writes "apple"
+Node B: {A:0, B:1}  ──► writes "orange"   (concurrent — neither descends from the other)
+                                            → store both, let app decide
+```
+
+#### Strategy 3 — CRDTs (Conflict-free Replicated Data Types)
+- Mathematical data structures where **all orderings of updates reach the same final state**
+- No conflicts possible by design
+- Example: you add "apple", someone else adds "orange" → merge = set `{apple, orange}`
+- **Figma and Google Docs use CRDTs**
+- Best for: counters, sets, text (operational transforms)
+
+
+### 8. High Availability (HA) — What It Actually Costs
+
+AP systems are obsessed with self-healing and uptime. HA is measured in "nines":
+
+| Availability | Downtime per year |
+|---|---|
+| 90% | 36.5 days |
+| 99% | 3.65 days |
+| 99.9% | 8.76 hours |
+| 99.99% | 52.56 minutes |
+| 99.999% | 5.26 minutes |
+
+
+### 9. The Celebrity / Hot Key Problem
+
+**Scenario:** Millions of requests arrive for a single key simultaneously.
+Example: a tweet from Selena Gomez. All requests hit the same shard → that server melts.
+
+#### Solution — Key Splitting
+
+Append a random suffix to the key. Define a **split factor** of e.g. 10:
+```
+"tweet:123"  →  "tweet:123_0", "tweet:123_1", ... "tweet:123_9"
+```
+Writes are spread across 10 different servers.
+
+**Trade-off — Read-Write Amplification:**
+- Writes: **10× faster** (spread across servers)
+- Reads: **10× slower** (must query all 10 shards, sum results in application)
+
+> Only use key splitting if the system is **write-heavy** and can tolerate slower reads.
+
+
+### 10. The ID Problem — Globally Unique IDs
+
+Auto-increment IDs break in distributed systems — there is no single central counter.
+Two servers can generate the same ID → data corruption.
+
+**Requirements for a distributed ID:**
+- Globally unique (no coordination needed between servers)
+- Sortable / sequential (B-trees need this to avoid random I/O)
+- Embeds time (so B-trees can append data in order)
+
+#### Snowflake ID (Twitter, 2010) — 64-bit integer
+
+```
+┌────────┬──────────────────────┬──────────────────┬─────────────────┐
+│ 1 bit  │      41 bits         │    10 bits       │    12 bits      │
+│ (sign) │    Timestamp (ms)    │   Machine ID     │ Sequence number │
+└────────┴──────────────────────┴──────────────────┴─────────────────┘
+```
+
+| Component | Detail |
+|---|---|
+| **Timestamp** | Milliseconds since epoch — makes IDs sortable |
+| **Machine ID** | Identifies which server generated the ID — supports **1024 shards** |
+| **Sequence** | Resets every millisecond — handles bursts of IDs within the same ms |
+
+**Properties:**
+- **Sortable** → B-tree can append data efficiently (no random I/O)
+- **69 years** of unique IDs before timestamp overflows
+- **No coordination** needed between servers
+
+> Machine IDs must be pre-assigned differently for each server to avoid collisions.
+
+---
+
+### 11. Zero-Downtime Migration Playbook
+
+When migrating from one database (or schema) to another, you cannot go offline.
+The 5-stage process:
+
+#### Stage 1 — Dual Writes
+Modify application code to write to **both** old and new databases.
+- New DB writes are **best-effort** (they do not block the user's request)
+- All new data starts flowing to the new sharded cluster
+
+#### Stage 2 — Backfill
+Write a script to copy historical data from old DB to new DB.
+
+**Race condition risk:** A row updates in the old DB *after* your script already copied it →
+old data overwrites newer data in new DB.
+
+**Fix:** Make writes to new DB **conditional** — only update a row if the incoming
+timestamp is **newer** than what is already stored. Never overwrite with stale data.
+
+#### Stage 3 — Verify
+Continuously pick **random rows** from both DBs and compare them.
+**Do not proceed until consistency is 100%.**
+
+#### Stage 4 — Switch Reads
+Flip application reads to the new DB.
+**Keep writing to both DBs** — the new DB may be misconfigured for unknown reasons.
+Writes still go to both places as a safety net.
+
+#### Stage 5 — Switch Writes
+If everything is stable for ~1 week, remove the dual-write code.
+Migration complete.
+
+```
+Dual write  ──►  Backfill  ──►  Verify  ──►  Switch read  ──►  Switch write
+```
 
 ---

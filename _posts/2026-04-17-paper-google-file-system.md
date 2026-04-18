@@ -1,11 +1,12 @@
 ---
 layout: post
-title:  "Paper: Google File System (GFS) — 2003"
+title:  "Paper: Google File System — 2003"
 date:   2026-04-17 00:00:00 +0000
 categories: distributed-systems
 ---
 
 ## Abbreviations
+
 | Symbol | Meaning |
 |---|---|
 | CS | Chunk Server |

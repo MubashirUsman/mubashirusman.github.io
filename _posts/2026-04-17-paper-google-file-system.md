@@ -17,7 +17,6 @@ categories: distributed-systems
 | S | Secondary Chunk Server |
 | M | Master |
 
----
 
 ## Goals
 
@@ -38,7 +37,7 @@ categories: distributed-systems
 
 ---
 
-## 3. Architecture
+## Architecture
 
 Since file is huge, its not going to be stored as a single contigous object, we divide it in chunks. Reads and writes can be made parallel. 64MB chunks.  
 Why 64MB size? Its a big chunk, so with such big chunks we will have less metadata for these chunks. If files are small, we will have fragmantation, downside! `:(`. Big chunk is suitable for sequential reads, we can keep open TCP connection.
@@ -254,7 +253,7 @@ GFS deliberately chose **not** to implement this — complexity vs. use-case tra
 
 ---
 
-## GFS — A Lot of Success
+## GFS received a lot of success
 
 GFS was hugely successful inside Google. The paper influenced essentially every distributed
 file system and object store that came after it (HDFS, S3 internal design, Colossus).

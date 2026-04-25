@@ -315,3 +315,20 @@ Partial Quorums,
 Conflict detection using time stamps - vector clocks
 Replica synchronisation - Gossip and Merkle Trees
 ```
+
+PBS is a method to characterize the behavior of a system such as Dynamo. PBS approximates the degree of inconsistency using the information gossip rate, network latency and processing delay. E.g In Cassandra timing information is piggybagged on other messages and then Monte Carlo method is used to do the estimate.
+
+Based on the Bailis et. al paper (2012) during normal operation eventually consistent data stores are often faster and can read a consistent state within tens or hundreds of milliseconds. The following table shows time required for consistent reads with 99.9% probability from LinkedIn and Yammer. In other words going from `R=1 and W=1` to `R=2 and W=1` reduces the inconsistency window from `1352ms` to `202ms` and read latency is only `32ms`. This means just by increasing R to 2, <span style="color:blue"> the time to read consistent reads has decreased significantly.</span> Of course `L_r` has increased because now `R` has increased.
+
+![Linkedin and Yammer](/assets/Linkedin-yammer.png)
+
+### Disorderly Programming
+Sometimes the reconciliation is required by the nature of data type when a partitions heals, for example in Dynamo's case we converge to same value by doing a read from `R` out of `N` servers. Similarly, to concatenate two strings, its impossible to reach the same value without imposing some order to the operations. Turns out if we know the implementation of a data type then its possible to reach the same value despite the order of operations. For example if we are finding the max of a set, we will reach the same result despite any order of the operations.
+
+**Convergent replicated data types** CRDT's are data structures designed to provide data types that will always
+converge, as long as they see the same set of operations (in any order). They exploit the knowledge regarding the commutativity and associativity of specific operations on specific datatypes. Many data types have operations which are not in fact order-independent. For example, adding items to a set is associative, commutative and idempotent. However, if we also allow items to be removed from a set, then we need some way to resolve conflicting operations, such as add(A) and remove(A). 
+> e.g Grow-only counter, Last Write Wins -register(timestamps or version numbers), Multi-valued -register(vector clocks), Grow-only set, 
+
+Lets say you only ever add the items, then a grow only set works. Interestingly, the register implementations correspond directly with the implementations that key value stores use: a last-write-wins register and a multi-valued register corresponds to the Dynamo strategy of retaining, exposing and reconciling concurrent changes.
+
+CALM theorem says this: that _logically monotonic programs are guaranteed to be eventually consistent._ Then, if we know that some computation is logically monotonic, then we know that it is also safe to execute without coordination. 

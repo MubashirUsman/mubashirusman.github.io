@@ -5,7 +5,7 @@ date:   2026-04-17 00:00:00 +0000
 categories: distributed-systems
 ---
 
-This page contains my notes from GFS paper.
+Google created a file system to provide hundreds of TB of storage across thousands of disks and machines, and this system is cocurrently accessed by clients. Its a distributed filesystem which provides fault tolerance and runs on commodity hardware.
 
 ## Abbreviations
 
@@ -20,7 +20,7 @@ This page contains my notes from GFS paper.
 | M | Master |
 
 
-## Goals
+## Goals of GFS
 
 - Distributed file system that stores **huge** data, files in Gigabytes
 - Anybody within Google can read it, data guaranteed not to be interleaved with **concurrent atomic appends**
@@ -42,7 +42,7 @@ This page contains my notes from GFS paper.
 ## Architecture
 
 Since file is huge, its not going to be stored as a single contigous object, we divide it in chunks. Reads and writes can be made parallel. 64MB chunks.  
-Why 64MB size? Its a big chunk, so with such big chunks we will have less metadata for these chunks. If files are small, we will have fragmantation, downside! `:(`. Big chunk is suitable for sequential reads, we can keep open TCP connection.
+Why 64MB size? Its a big chunk, so with such big chunks we will have _less metadata(1)_ for these chunks, so less interaction with master. Big chunk is suitable for _sequential reads_, we can keep open TCP connection. Also metadata size becomes smaller with bigger chunksize, and we can keep it in memory. If files are small, we will have fragmantation, downside! `:(`, also if files are small and accessed simultaneously then CS can become hotspots.
 
 Can a single master become the bottleneck? Probably not, because actual data is queried from CS, client caches response from master, chunk size is big so master won't be queried very much if files are big.
 
@@ -61,8 +61,6 @@ Master = keeps track of mapping all **filenames to all chunk identifiers**, and 
 Master does prefix compression on file names to conserve memory.
 Heartbeat tells what chunks a CS stores.
 ```
-
-**Read flow:** Client → Master (returns CS locations) → Client reads chunks directly from CS.
 
 ---
 

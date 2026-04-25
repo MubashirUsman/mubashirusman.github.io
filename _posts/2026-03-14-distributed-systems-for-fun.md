@@ -1,6 +1,6 @@
 ---
 ---
-# Notes from Distributed Systems for Fun and Profit
+# Notes from Distributed Systems for Fun
 
 This book is freely available online and is written by Mikito Takada.
 When I started learning about distributed systems I have been taking notes mostly on my notebook, but it takes longer to reference it and go back. So I decided to keep my notes here when I decided to read this book. In big systems things like fault tolerance, leader election, failure detection, coordination, consistency, availability come up very often and what strategy we choose to deal with them is dependent on the kind of system we are after.
@@ -286,3 +286,32 @@ NO. Although with `R+W>N` the system can detect conflicts, because any read and 
 
 - This means that the quorums are no longer guaranteed to always overlap. Even `R = W = N` would not qualify, since while the quorum sizes are equal to N, the nodes in those quorums can change during a failure.
 - Dynamo is designed to be always writable, writes are allowed on both sides of a partition, which means that **for at least some time the system does not act as a single copy**. So calling R + W >N "strongly consistent" is misleading; the guarantee is merely **probabilistic** - which is not what strong consistency refers to.
+
+#### Conflict Detection and Read Repair
+If the system allows replicas to diverge, they must have a way to eventually reconcile two different values. One way to do this is to detect conflicts at read time, and then apply some conflict resolution method. In general, this is implemented by keeping the causal history of a piece of data by keeping some metadata about it. **Vector clocks** can be used to represent the history of a value. Indeed, this is what the original Dynamo design uses for detecting conflicts. There are many other ways than vector clocks.  
+
+**No metadata**. When a system does not track metadata, and only returns the value (e.g. via a
+client API), it cannot really do anything special about concurrent writes. . A common rule is that
+the last writer wins.
+
+**Timestamps** The value with the higher timestamp value wins. But if time not carefully synchronized, many odd things can happen where old data from a system with a faulty or fast clock overwrites newer values. Cassandra is an example.
+
+**Version numbers** Version numbers may avoid some of the issues related with using timestamps. 
+
+**Vector clocks**. Using vector clocks, concurrent and out of date updates can be detected. Though in some cases, concurrent changes we need to ask the client to pick a value. When reading a value, the client contacts R of N nodes and asks them for the latest value for a key. It takes all the responses, discards the values that are strictly older (using the vector clock value to detect this). If there is only one unique vector clock + value pair, it returns that. If there are multiple vector clock + value pairs that have been edited concurrently (e.g. are not comparable), then all of those values are returned. **Read repair** may return multiple values. This means that the client / application developer must occasionally handle these cases by picking a value.
+
+#### Replica Synchronization: gossip and Merkle trees
+
+Since Dynamo system is fault tolerant to node failures and network partitions, it needs a way to deal with nodes rejoining the cluster after being partitioned, or when a failed node is replaced or partially recovered. Replica synchronization is used to bring nodes up to date after a failure, and for periodically synchronizing replicas with each other.
+
+**Gossip** is a probabilistic technique. Its not known which node contacts with the other in advance, instead nodes have some probability _p_ of attempting to synchronize with each other. After every _t_ seconds, each node picks some node to communicate with. This provides an additional mechanism beyond the synchronous task (e.g. the partial quorum writes) which brings the replicas up to date. Gossip is scalable, and has no single point of failure, but can only provide probabilistic guarantees.
+**Merkle trees** Data store be hashed with a level of degree, for example hash half the keys, hash quarter keys or hash all the keys. This lets nodes to compare there data with other nodes much efficiently. This is a Merkle Tree Technique. By using this hash, its efficient to idenity which keys have different values, then only necessary information can be exchanged. 
+
+### Dynamo in Practice: probabilistically bounded staleness (PBS)
+
+```
+Dynamo = Consistent Hashing, 
+Partial Quorums, 
+Conflict detection using time stamps - vector clocks
+Replica synchronisation - Gossip and Merkle Trees
+```

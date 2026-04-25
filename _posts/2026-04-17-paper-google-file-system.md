@@ -72,6 +72,7 @@ The master holds two tables in **memory**:
 - Stored **non-volatile (NV)** — persisted to disk via operation log
 
 ### Table 2: chunk handle → (stored per chunk)
+
 | Field | Volatile? |
 |---|---|
 | List of Chunk Servers holding this chunk | **Volatile** — re-fetched from CSes on recovery |

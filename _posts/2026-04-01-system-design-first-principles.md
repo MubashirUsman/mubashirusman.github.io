@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Notes on System Design from First Principles"
+title:  "Notes on System Design from First Principles (1-7)"
 date:   2026-04-01 13:09:00 +0000
 categories: distributed-systems
 ---
@@ -516,14 +516,14 @@ Before sharding, exhaust simpler options in order:
 > **Conclusion:** The best way is to **not shard**. Sharding loses simplicity, loses joins,
 > and loses ACID transactions. It is the last resort.
 
-### 2. Sharding — Horizontal Scaling
+### Sharding — Horizontal Scaling
 
 **Sharding** = split data into pieces across multiple servers. A **router** takes a
 **shard key** and routes the request to the correct server.
 
 Good shard key candidates: `user_id`, `tenant_id`, `europe_user`, `year_num`
 
-#### 2a. Range-Based Sharding — O(1) lookup
+#### a. Range-Based Sharding — O(1) lookup
 
 ```
 users 1      → 25,000   ──► Server 1
@@ -534,7 +534,7 @@ users 25,001 → 50,000   ──► Server 2
 goes to Shard 2. If writes are time-based, a single shard receives *all* current writes.
 This is a **hot spot**.
 
-#### 2b. Hash-Based Sharding
+#### b. Hash-Based Sharding
 
 ```
 id  ──►  hash(id)  ──►  hash(id) % N  ──►  Shard A / B / C
@@ -550,9 +550,8 @@ id  ──►  hash(id)  ──►  hash(id) % N  ──►  Shard A / B / C
 of all keys need to move to a new location. Network bandwidth fills, CPU spikes,
 I/O is saturated. This is the **resharding storm**.
 
----
 
-### 3. Consistent Hashing — Solving the Resharding Storm
+### Consistent Hashing — Solving the Resharding Storm
 
 Developed at MIT. Used by **DynamoDB, Cassandra, Discord**. We map keys and servers on the hash circle output, so we are already making sure that all servers and keys are distributed in the equaivalent fashion.
 
@@ -590,9 +589,7 @@ Servers may not land uniformly on the ring by chance.
 By the **law of large numbers**, these virtual nodes mix evenly across the ring,
 guaranteeing uniform distribution even with few physical servers.
 
----
-
-### 4. The CAP Theorem
+### The CAP Theorem
 
 When a **network partition** (communication failure between nodes) occurs, you must
 choose between **two** of:
@@ -623,7 +620,7 @@ choose between **two** of:
 
 ---
 
-### 5. PACELC Theorem — Beyond CAP
+### PACELC Theorem — Beyond CAP
 
 CAP only describes behaviour *during* a partition. **PACELC** extends it to normal operation:
 
@@ -661,7 +658,7 @@ Write arrives → Primary writes locally → tells user "success" → updates re
 - PACELC profile: AP / L (fast normally, inconsistent during partition)
 
 
-### 6. Consistency Spectrum (Consistency Models)
+### Consistency Spectrum (Consistency Models)
 
 Weaker consistency = faster system. **Pick the weakest model you can tolerate.**
 
@@ -678,7 +675,7 @@ Sub-guarantees you can layer on top:
 
 ---
 
-### 7. Conflict Resolution — When Two Nodes Disagree
+### Conflict Resolution — When Two Nodes Disagree
 
 When two nodes get updated simultaneously/during partition with different data, you need a conflict resolution strategy to merge:
 
@@ -709,7 +706,7 @@ Node B: {A:0, B:1}  ──► writes "orange"   (concurrent — neither descends
 - Best for: counters, sets, text (operational transforms)
 
 
-### 8. High Availability (HA) — What It Actually Costs
+### High Availability (HA) — What It Actually Costs
 
 AP systems are obsessed with self-healing and uptime. HA is measured in "nines":
 
@@ -722,7 +719,7 @@ AP systems are obsessed with self-healing and uptime. HA is measured in "nines":
 | 99.999% | 5.26 minutes |
 
 
-### 9. The Celebrity / Hot Key Problem
+### The Celebrity / Hot Key Problem
 
 **Scenario:** Millions of requests arrive for a single key simultaneously.
 Example: a tweet from Selena Gomez. All requests hit the same shard → that server melts.
@@ -742,7 +739,7 @@ Writes are spread across 10 different servers.
 > Only use key splitting if the system is **write-heavy** and can tolerate slower reads.
 
 
-### 10. The ID Problem — Globally Unique IDs
+### The ID Problem — Globally Unique IDs
 
 Auto-increment IDs break in distributed systems — there is no single central counter.
 Two servers can generate the same ID → data corruption.
@@ -776,7 +773,7 @@ Two servers can generate the same ID → data corruption.
 
 ---
 
-### 11. Zero-Downtime Migration Playbook
+### Zero-Downtime Migration Playbook
 
 When migrating from one database (or schema) to another, you cannot go offline.
 The 5-stage process:

@@ -103,3 +103,5 @@ While choosing target don't pick based on current performance as you might end u
 #### SLOs set expectations
 
 Using a tighter internal SLO than SLO advertised to users gives you room to spot chronic problems before they occur. And don't overachieve as this might lead to users over relying on the service. Throttle some requests if system is too fast. Knowing how system is meeting the expectations helps decide whether to invest in making system faster, avaialable or more resilient.
+
+---

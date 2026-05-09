@@ -257,6 +257,11 @@ After accepting the write intially, there is a asynchronous replica synchronizat
 
 #### Consistent Hashing
 
+Servers and keys are both hashed through the same hash function. The output of the **hash(server_names)** is is mapped on a **ring** to place the servers. This results in random distribution of servers on the ring, then the output of key hash, **hash(key)**, is calculated and placed on the server whichever comes first on the circle by mapping the key on circle by moving clockwise from key's position.
+
+The downside of consistent hashing is that it randomly distributes servers on the ring. To spread the servers on the ring more **evenly**, a concept of **virtual nodes** is used by Dynamo. Virtual nodes are calculated by spreading one node in **N** nodes, these nodes are evenly distributed on the circle. And then keys are spread on the server more evenly.
+
+
 The main idea is that **key can be mapped by a client to a set of nodes** responsible for storing it by a simple calculation. Means a client can locate keys without querying the system. Since hashing is faster than remote procedure call, so this saves resources.  
 
 #### Partial Quorums

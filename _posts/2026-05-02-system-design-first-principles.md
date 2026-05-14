@@ -5,8 +5,6 @@ date:   2026-04-01 13:09:00 +0000
 categories: distributed-systems
 ---
 
-# System Design from First Principles
-
 ## Part 8 CAP Theorem — A Deeper Dive
 
 > **Core principle:** With every optimisation, we are making a trade-off.

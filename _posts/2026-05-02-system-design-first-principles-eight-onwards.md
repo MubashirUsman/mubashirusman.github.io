@@ -318,3 +318,190 @@ For Raft, we use dedicated **coordination services** rather than implementing it
 **Google Spanner:** Globally distributed database where **each shard is a Paxos-controlled group of machines**.
 
 ---
+
+## Part 10 Caching
+
+### Why Is an App Slow?
+
+Not network. Not bad queries. It's the **memory hierarchy**.
+
+See Lecture 5 for latency numbers. The hierarchy from fastest to slowest:
+
+```
+L1 < L2 < L3 < RAM < SSD < Network
+```
+
+The solution is to keep hot data as high up this hierarchy as possible.
+
+#### The 90-10 Rule (Locality of Reference)
+
+In almost all systems ever built, **90% of all requests are for 10% of the data**.
+
+Real examples:
+- Tweets from the last few hours are being read constantly
+- Only the top videos are being watched 90% of the time
+- Famous products on Amazon get the vast majority of traffic
+
+#### Two types of locality
+
+| Type | Meaning |
+|---|---|
+| **Temporal locality** | If data was accessed recently, it is likely to be accessed again soon |
+| **Spatial locality** | Data *near* the accessed data will likely be accessed soon |
+
+> Cache holds the **hot 10%** of data. If cache hit rate is 95%, then only 5% of
+> requests ever reach the disk.
+
+
+#### The Tradeoff with Cache
+
+| Cost | Detail |
+|---|---|
+| **RAM is expensive** | 10–50× the cost of SSD per GB |
+| **Volatile** | Cache is lost on crash — it's in RAM |
+| **Inconsistency risk** | Two copies of data exist (cache + DB) — they can diverge |
+
+
+### Caching Strategies
+
+#### Cache Aside (Lazy Loading)
+
+```
+Request arrives
+      │
+      ▼
+Check cache ──► HIT?  ──► return data :)
+      │
+      ▼ MISS
+Go to DB
+      │
+      ▼
+Save result in cache
+      │
+      ▼
+Return data to user
+```
+
+**Used by:** Redis with Django, Node.js apps
+
+| Pros | Cons |
+|---|---|
+| Resilient — only caches what's needed | First request is always a miss |
+| Cache failure doesn't break the app | **Stale data risk** — if DB changes, cache is not updated |
+
+
+#### Write Through Caching
+
+Every write goes through the cache **first**, then persists to DB.
+
+```
+Write request → Cache → DB (synchronously)
+```
+
+| Pros | Cons |
+|---|---|
+| Always consistent — cache and DB in sync | Writes are still slow (must wait for DB) |
+| No stale reads, fast reads | Wastes cache space on rarely-read data |
+
+**Best for:** pricing data, account info, anything that **must be fresh**.
+
+
+#### Write Back (Write Behind)
+
+Write arrives → cache returns **"success" instantly** → marks data as **"dirty"** →
+flushes to DB later in a **big batch**.
+
+```
+Write request → Cache ("success" immediately) ──► [dirty] ──► DB (batch, later)
+```
+
+| Pros | Cons |
+|---|---|
+| **Fastest write speed** — millions of writes/sec | **Data loss** if cache crashes before flush |
+| Batching reduces DB load | |
+
+
+### Cache Invalidation
+
+The hardest problem in caching — **data gets stale**. Three strategies:
+
+#### TTL (Time To Live)
+Keep a cache entry for a fixed duration. After TTL expires, entry is deleted.
+
+| Pros | Cons |
+|---|---|
+| Predictable and simple | Data can be wrong for up to the full TTL window |
+
+> Fine for social media. **Not okay** for banking apps.
+
+
+#### Eviction Policy
+When the cache is full, decide what to remove:
+
+| Policy | Behaviour | Notes |
+|---|---|---|
+| **LRU** (Least Recently Used) | Evicts oldest unused data | Most common. Fits temporal locality perfectly. **Redis uses this.** |
+| **LFU** (Least Frequently Used) | Evicts least frequently accessed data | Less common |
+
+#### Manual Invalidation
+App updates DB → sends a notification to cache → cache deletes/updates that entry.
+
+| Pros | Cons |
+|---|---|
+| Immediate consistency | **Not reliable** — notification can be lost over the network |
+| Fine-grained control | Easy in small environments, **very hard at scale** |
+
+> Every invalidation strategy has a disadvantage. There is no perfect answer.
+
+
+### Cache Failure Modes
+
+#### Thundering Herd Problem
+When a cache server crashes, cache is no longer a shield. In this case **all queries go directly to the DB** --> all load falls on the database --> DB may also crash.
+
+**Solution: Cache Warming**
+Prepopulate the cache with hot data *before* sending live traffic to it.
+
+#### Cache Penetration
+Deliberate (or accidental) requests for **keys that don't exist** in the cache.
+Every single query misses the cache and hits the DB.
+This can be used as a **DDoS vector** against your database.
+
+**Solution: Bloom Filter**
+Put a Bloom filter in front of the cache. If the Bloom filter says the key definitely
+doesn't exist ==> reject the request immediately, never touch the DB.
+
+
+### Caching Is Fractal
+
+Caching doesn't just exist at the application layer — it exists **at every layer** of the stack:
+
+| Layer | Cache |
+|---|---|
+| Browser | HTML, CSS, JS (Cache-Control headers) |
+| OS | Page cache (RAM buffer for disk reads) |
+| CDN | Videos, images, static assets at edge |
+| DB | Buffer pool (DB's own in-memory page cache) |
+| Application | Redis, Memcached |
+
+#### When deciding which layer needs caching
+
+Ask two questions:
+
+```
+Is the distance too much?  →  CDN is the solution
+Is the query too slow?     →  Redis is the solution
+```
+
+
+#### Conclusion — When to Cache
+
+> **Trade consistency for scale** — that is what a cache offers.
+
+The rules:
+- Only add a cache when **a single Postgres instance is not enough**
+- Trust the **90-10 rule** — most data is cold, cache the hot tail
+- Always **plan for invalidation** before adding a cache
+- The job of a cache is to **protect the database**
+
+---

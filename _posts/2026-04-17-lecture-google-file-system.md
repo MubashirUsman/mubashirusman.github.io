@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Paper: Google File System (2003)"
+title:  "Lecture: Google File System"
 date:   2026-04-17 00:00:00 +0000
 categories: distributed-systems
 ---

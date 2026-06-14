@@ -1,6 +1,9 @@
 ---
+layout: post
+title:  "Book: Distributed Systems for Fun and Profit"
+date:   2026-03-14 00:00:00 +0000
+categories: distributed-systems system-design
 ---
-# Book: Distributed Systems for Fun
 
 This book is freely available online and is written by Mikito Takada.
 When I started learning about distributed systems I have been taking notes mostly on my notebook, but it takes longer to reference it and go back. So I decided to keep my notes here when I decided to read this book. In big systems things like fault tolerance, leader election, failure detection, coordination, consistency, availability come up very often and what strategy we choose to deal with them is dependent on the kind of system we are after.

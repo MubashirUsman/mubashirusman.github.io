@@ -1,9 +1,20 @@
 ---
 layout: post
-title:  "What it takes to have minimum reliability?"
+title:  "Load balancing and minimum reliability?"
 date:   2025-12-25 00:30:20 +0100
 categories: sre
 ---
+
+## How DNS Load Balancing Works?
+
+Load balancing is a difficult problem and planet scale services handle it at different levels. DNS load balancing is one of the techniques to spread load globally and is a concpetually simple to understand. It works as follows: return multiple `A` or `AAAA` addresses to a query and let the client choose at random. This will distribute traffic equally but we don't have a lot of control on this. 
+
+Imagine a situation when a server is overloaded and clients keep sending requests being unaware of the situation. Even though `SRV` record type allows to put __weight__ on each record, its not supported by browsers and hence can not be used.
+
+Another problem with sending multiple `A` records is that the clients are unaware of which server is closer to them. But it can be mitigated by using Anycast for multiple authoritative nameservers and forwarding clients to their nearest datacenter.
+
+Yet another problem is that the authoritative ns sees the IP of the recursive nameserver and not the end user. So it can not optimize for the distance between recursive nameserver and End users. A solution to this problem already exists with the ENDS0 extension: which simply sends the subnet of the user in the query so that the authoritative NS gives an optimal answer seeing the user's subnet. This problem could be worse when an ISP's recursive nameserver is responsible for the entire region and serves millions of users.
+
 **This architecture is for web-applications and for my own reference.**
 Some sane choices to make:
 1. Have **public and private subnets** for the infrastructure, This means that application server, database, container registry, object storage, 

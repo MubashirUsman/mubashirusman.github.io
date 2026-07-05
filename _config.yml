@@ -26,11 +26,9 @@ title: Mubashir Usman's Blog
 author: Mubashir Usman
 
 navbar-links:
-  About Me: "about.markdown"
+  # About Me: "about.markdown"
   Resources:
     - Linkedin: "https://www.linkedin.com/in/mubashir-usman-ijaz/"
-
-avatar: "/assets/space.jpg"
 
 email: mubashirusman016 at gmail dot com
 description: >- # this means to ignore newlines until "baseurl:"

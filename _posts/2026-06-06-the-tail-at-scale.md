@@ -2,7 +2,7 @@
 layout: post
 title:  "Paper: The Tail at Scale (2013)"
 date:   2026-06-06 00:00:00 +0000
-categories: distributed-systems
+categories: distributed-systems sre 
 ---
 
 As large scale systems should be made fault-tolerant out of faulty components, similarly large online services should be responsive out of less predictable parts, such services are called **tail-tolerant**.

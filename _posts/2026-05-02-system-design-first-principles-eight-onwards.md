@@ -2,7 +2,7 @@
 layout: post
 title:  "Notes on System Design from First Principles (8-10)"
 date:   2026-04-01 13:09:00 +0000
-categories: distributed-systems
+categories: distributed-systems system-design
 ---
 
 ## Part 8 CAP Theorem — A Deeper Dive

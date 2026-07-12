@@ -2,7 +2,7 @@
 layout: post
 title:  "SRE Book Embracing Risk and SLOs"
 date:   2026-04-30 00:00:00 +0000
-categories: site reliability engineering
+categories: sre
 ---
 
 These are small snippets taken from Site Reliability Engineering book, just for quick reference.

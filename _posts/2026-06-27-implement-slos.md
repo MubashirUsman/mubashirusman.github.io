@@ -2,7 +2,7 @@
 layout: post
 title:  "Book: SRE Workbook"
 date:   2026-06-27 00:00:00 +0000
-categories: distributed-systems
+categories: distributed-systems sre
 ---
 
 # Chapter 2 Implementing SLOs

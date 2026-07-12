@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "SRE Book"
+title:  "SRE Book Embracing Risk and SLOs"
 date:   2026-04-30 00:00:00 +0000
 categories: site reliability engineering
 ---

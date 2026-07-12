@@ -39,7 +39,7 @@ url: "https://mubashirusman.github.io" # the base hostname & protocol for your s
 # github_username:  jekyll
 
 # Build settings
-theme: jekyll-theme-hydejack
+theme: jekyll-theme-chirpy
 # remote_theme: daattali/beautiful-jekyll@6.0.1
 
 feed_show_tags: true

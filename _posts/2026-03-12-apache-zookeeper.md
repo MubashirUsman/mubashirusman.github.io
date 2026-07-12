@@ -1,5 +1,8 @@
 ---
-
+layout: post
+title: "Apache Zookeeper"
+date: 2026-03-12 00:00:00 +0000
+categories: distributed-systems
 ---
 This is my attempt to understand Apache Zookeeper, I will write this post for my future reference like coming back to it after 6 months.
 

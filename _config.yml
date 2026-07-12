@@ -1,71 +1,100 @@
-# Welcome to Jekyll!
-#
-# This config file is meant for settings that affect your whole blog, values
-# which you are expected to set up once and rarely edit after that. If you find
-# yourself editing this file very often, consider using Jekyll's data files
-# feature for the data you need to update frequently.
-#
-# For technical reasons, this file is *NOT* reloaded automatically when you use
-# 'bundle exec jekyll serve'. If you change this file, please restart the server process.
-#
-# If you need help with YAML syntax, here are some quick references for you:
-# https://learn-the-web.algonquindesign.ca/topics/markdown-yaml-cheat-sheet/#yaml
-# https://learnxinyminutes.com/docs/yaml/
-#
-# Site settings
-# These are used to personalize your new site. If you look in the HTML files,
-# you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
-# You can create any custom variable you would like, and they will be accessible
-# in the templates via {{ site.myvariable }}.
-site:
-  future: true
+# Site Configuration
+
+theme: jekyll-theme-chirpy
+
+lang: en
+timezone: Europe/Berlin
 
 title: Mubashir Usman's Blog
-
-# Your name to show in the footer
-author: Mubashir Usman
-
-navbar-links:
-  # About Me: "about.markdown"
-  Resources:
-    - Linkedin: "https://www.linkedin.com/in/mubashir-usman-ijaz/"
-
-email: mubashirusman016 at gmail dot com
-description: >- # this means to ignore newlines until "baseurl:"
+tagline: SRE learnings and distributed systems notes
+description: >-
   My learnings as a site reliability engineer and building reliable systems for production.
   I sometimes post my thoughts on navigating life in general.
-url: "https://mubashirusman.github.io" # the base hostname & protocol for your site, e.g. http://example.com
-# twitter_username: jekyllrb
-# github_username:  jekyll
 
-# Build settings
-theme: jekyll-theme-chirpy
-# remote_theme: daattali/beautiful-jekyll@6.0.1
+url: "https://mubashirusman.github.io"
+baseurl: ""
 
-feed_show_tags: true
+future: true
 
-post_search: true
+github:
+  username: mubashirusman
+
+social:
+  name: Mubashir Usman
+  email: mubashirusman016@gmail.com
+  links:
+    - https://www.linkedin.com/in/mubashir-usman-ijaz/
+    - https://github.com/mubashirusman
+
+toc: true
+paginate: 10
 
 plugins:
   - jekyll-feed
   - jekyll-paginate
+  - jekyll-archives
 
-# Exclude from processing.
-# The following items will not be processed, by default.
-# Any item listed under the `exclude:` key here will be automatically added to
-# the internal "default list".
-#
-# Excluded items can be processed by explicitly listing the directories or
-# their entries' file path in the `include:` list.
-#
-# exclude:
-#   - .sass-cache/
-#   - .jekyll-cache/
-#   - gemfiles/
-#   - Gemfile
-#   - Gemfile.lock
-#   - node_modules/
-#   - vendor/bundle/
-#   - vendor/cache/
-#   - vendor/gems/
-#   - vendor/ruby/
+kramdown:
+  footnote_backlink: "&#8617;︎"
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: highlight
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+      start_line: 1
+
+collections:
+  tabs:
+    output: true
+    sort_by: order
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+      comments: false
+      toc: true
+      permalink: /posts/:title/
+  - scope:
+      path: _drafts
+    values:
+      comments: false
+  - scope:
+      path: ""
+      type: tabs
+    values:
+      layout: page
+      permalink: /:title/
+
+sass:
+  style: compressed
+
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  profile: false
+  blanklines: false
+  ignore:
+    envs: [development]
+
+jekyll-archives:
+  enabled: [categories, tags]
+  layouts:
+    category: category
+    tag: tag
+  permalinks:
+    tag: /tags/:name/
+    category: /categories/:name/
+
+exclude:
+  - "*.gem"
+  - "*.gemspec"
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor

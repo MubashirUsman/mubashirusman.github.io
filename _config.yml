@@ -6,10 +6,10 @@ lang: en
 timezone: Europe/Berlin
 
 title: Mubashir Usman's Blog
-tagline: SRE learnings and distributed systems notes
+tagline: Reliability is the fundamental feature and 100% uptime is the wrong reliability target for anything.
 description: >-
-  My learnings as a site reliability engineer and building reliable systems for production.
-  I sometimes post my thoughts on navigating life in general.
+  My learnings as a reliability engineer and building systems for production.
+  I sometimes read papers and post my thoughts on them or just post about life in general.
 
 url: "https://mubashirusman.github.io"
 baseurl: ""

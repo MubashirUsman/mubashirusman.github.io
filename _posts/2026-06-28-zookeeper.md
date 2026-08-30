@@ -61,3 +61,16 @@ finalized and do not use it.
 **Lock without Herd Effect**: we define a lock-znode and all clients wanting to have a lock line up under this znode in the order of their arrival. All clients have ephemeral and sequential flags set. Use of sequential flag orders the clients attempt to acquire the lock. Only the client with the lowest sequence number holds the lock. Client waits for the deletion of the znode that holds the lock. By only watching for one znode that precedes the client’s znode we avoid the herd effect. There is no polling or timeout.
 
 **Read/Write locks** is implemented by sharing the read lock among many readers. For a writer to get lock, it must wait for the node before it, and wait until it gets deleted. For a read node, it must only wait if there exists a write lock smaller than its znode number, otherwise it can share lock with other read nodes.
+
+## Limitations
+
+Zookeeper can become a bottleneck if a particular znode triggers a large number of watches, which in turn triggers a large number of reads from clients. Such updates could result in stalls and potentially blocking updates.
+
+The same zookeeper watches can result in thundering herd problem, when a watch send notification to many clients and the clients can overwhelm zookeeper.
+
+Another interesting bottleneck would be the network throughput, lets say if clients have a payload which is 5MB in size, and the NIC supports 1Gbps, then a rough estimate would be serving 25 clients. And to serve 1000 clients it would take 40 seconds which might not be tolerable latency.
+
+Reading: 
+[Location Aware Distribution](https://engineering.fb.com/2018/07/19/data-infrastructure/location-aware-distribution-configuring-servers-at-scale/?utm_campaign=fb4d-facebook&utm_medium=social&utm_source=fb4d-facebook-073018)
+
+[Configuration Management at Facebook](/assets/papers/holistic-config-management-at-facebook.pdf)

@@ -6,11 +6,11 @@ lang: en
 timezone: Europe/Berlin
 
 title: Mubashir Usman's Blog
-tagline: Reliability is the fundamental feature and 100% uptime is the wrong reliability target for anything.
+tagline: I post here when I am rambling.
 description: >-
   My learnings as a reliability engineer and building systems for production.
   I sometimes read papers and post my thoughts on them or just post about life in general.
-
+  Reliability is the fundamental feature and 100% uptime is the wrong reliability target for anything.
 url: "https://mubashirusman.github.io"
 baseurl: ""
 
